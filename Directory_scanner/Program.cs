@@ -35,6 +35,9 @@ namespace Directory_scanner
 
             PrintStat(mimeGrouped);
 
+            GenHTML(baseDir, result, mimeGrouped);
+
+            Console.WriteLine("Генерация отчета завершена. Нажмите любую клавишу для выхода...");
             Console.ReadKey(true);
         }
 
@@ -72,9 +75,9 @@ namespace Directory_scanner
         static void PrintStat(IEnumerable<IGrouping<string, FileInfo>> groupedList)
         {
             Console.WriteLine("---/ Статистика по MimeType /---\n");
-            uint num = 0;
+            ulong num = 0;
             foreach (var group in groupedList)
-                num += (uint)group.Count();
+                num += (ulong)group.Count();
             foreach (var group in groupedList)
             {
                 Console.WriteLine(group.Key);
@@ -83,11 +86,42 @@ namespace Directory_scanner
                     mediumSize += item.Length;
                 mediumSize /= group.Count();
                 Console.WriteLine($"Средний размер = {mediumSize} байт");
-                Console.WriteLine($"На данный тип приходится {group.Count()*100/num}% файлов ({group.Count()}/{num})\n");
-
+                Console.WriteLine($"На данный тип приходится {(ulong)group.Count() * 100 / num}% файлов ({group.Count()}/{num})\n");
             }
         }
+        static void GenHTML(string baseDir, List<(DirectoryInfo dir, ulong weight, FileInfo[] files)> list, IEnumerable<IGrouping<string, FileInfo>> groupedList)
+        {
+            StreamWriter html = new StreamWriter($"{baseDir}/report.html");
 
-
+            html.WriteLine("<html>");
+            html.WriteLine("<head>");
+            html.WriteLine("<title>HTML-Document</title>");
+            html.WriteLine("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />");
+            html.WriteLine("</head>");
+            html.WriteLine("<body>");
+            foreach (var item in list)
+            {
+                html.WriteLine($"<h4>---/ Каталог: {item.dir.FullName} Размер: {item.weight} байт /---</h4>");
+                foreach (var file in item.files)
+                    html.WriteLine($"<div>{file.Name} Размер: {file.Length} байт => {MimeMapping.GetMimeMapping(file.Name)}</div>");
+            }
+            html.WriteLine($"<h4>Статистика по MimeType</h4>");
+            ulong num = 0;
+            foreach (var group in groupedList)
+                num += (ulong)group.Count();
+            foreach (var group in groupedList)
+            {
+                html.WriteLine($"<div>{group.Key}</div>");
+                double mediumSize = 0;
+                foreach (var item in group)
+                    mediumSize += item.Length;
+                mediumSize /= group.Count();
+                html.WriteLine($"<div>Средний размер = {mediumSize} байт</div>");
+                html.WriteLine($"<div>На данный тип приходится {(ulong)group.Count() * 100 / num}% файлов ({group.Count()}/{num})</div><BR>");
+            }
+            html.WriteLine("</body>");
+            html.WriteLine("</html>");
+            html.Close();
+        }
     }
 }
